@@ -1,0 +1,41 @@
+# Advent of Code 2022
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.8.0"}
+])
+```
+
+## Problem One
+
+```elixir
+input_control = Kino.Input.textarea("Paste Raw Input")
+```
+
+```elixir
+puzzle_input = Kino.Input.read(input_control)
+practise_input = "1000
+2000
+3000
+
+4000
+
+5000
+6000
+
+7000
+8000
+9000
+
+10000"
+
+String.split(puzzle_input, ["\n\n"])
+|> Enum.map(fn elf ->
+  String.split(elf, "\n")
+  |> Enum.map(fn weight -> elem(Integer.parse(weight), 0) end)
+end)
+|> Enum.map(fn elf -> Enum.reduce(elf, fn weight, acc -> weight + acc end) end)
+|> Enum.sort(&(&1 >= &2))
+|> Enum.take(3)
+|> Enum.sum()
+```
