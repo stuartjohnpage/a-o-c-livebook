@@ -39,3 +39,65 @@ end)
 |> Enum.take(3)
 |> Enum.sum()
 ```
+
+## Problem Two
+
+```elixir
+puzzle_input = Kino.Input.read(input_control)
+
+rock = 1
+paper = 2
+scissors = 3
+
+lose = 0
+draw = 3
+win = 6
+
+outcome = %{
+  "A X" => lose + scissors,
+  "A Y" => draw + rock,
+  "A Z" => win + paper,
+  "B X" => lose + rock,
+  "B Y" => draw + paper,
+  "B Z" => win + scissors,
+  "C X" => lose + paper,
+  "C Y" => draw + scissors,
+  "C Z" => win + rock
+}
+
+input = puzzle_input |> String.split("\n")
+
+Enum.reduce(input, 0, fn round, acc -> outcome[round] + acc end)
+```
+
+```elixir
+rock = 1
+paper = 2
+scissors = 3
+
+lose = 0
+draw = 3
+win = 6
+
+outcome = %{
+  "A X" => draw + rock,
+  "A Y" => win + paper,
+  "A Z" => lose + scissors,
+  "B X" => lose + rock,
+  "B Y" => draw + paper,
+  "B Z" => win + scissors,
+  "C X" => win + rock,
+  "C Y" => lose + paper,
+  "C Z" => draw + scissors
+}
+
+input = puzzle_input |> String.split("\n")
+
+Enum.reduce(input, 0, fn round, acc -> outcome[round] + acc end)
+```
+
+## Problem Three
+
+```elixir
+
+```
