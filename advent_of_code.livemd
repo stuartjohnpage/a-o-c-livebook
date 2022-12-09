@@ -8,9 +8,8 @@ Mix.install([
 import Enum
 ```
 
-## Problem One
+## --- Day 1: Calorie Counting ---
 
---- Day 1: Calorie Counting ---
 Santa's reindeer typically eat regular reindeer food, but they need a lot of magical energy to deliver presents on Christmas. For that, their favorite snack is a special type of star fruit that only grows deep in the jungle. The Elves have brought you on their annual expedition to the grove where the fruit grows.
 
 To supply enough magical energy, the expedition needs to retrieve a minimum of fifty stars by December 25th. Although the Elves assure you that the grove has plenty of fruit, you decide to grab any fruit you see along the way, just in case.
@@ -91,9 +90,8 @@ In the example above, the top three Elves are the fourth Elf (with 24000 Calorie
 
 Find the top three Elves carrying the most Calories. How many Calories are those Elves carrying in total?
 
-## Problem Two
+## --- Day 2: Rock Paper Scissors ---
 
---- Day 2: Rock Paper Scissors ---
 The Elves begin to set up camp on the beach. To decide whose tent gets to be closest to the snack storage, a giant Rock Paper Scissors tournament is already in progress.
 
 Rock Paper Scissors is a game between two players. Each game contains many rounds; in each round, the players each simultaneously choose one of Rock, Paper, or Scissors using a hand shape. Then, a winner for that round is selected: Rock defeats Scissors, Scissors defeats Paper, and Paper defeats Rock. If both players choose the same shape, the round instead ends in a draw.
@@ -188,7 +186,7 @@ input = puzzle_input |> String.split("\n")
 Enum.reduce(input, 0, fn round, acc -> outcome[round] + acc end)
 ```
 
-## Problem Three
+## --- Day 3: Rucksack Reorganization ---
 
 ```elixir
 input_control = Kino.Input.textarea("Paste Raw Input")
@@ -361,7 +359,7 @@ puzzle_input =
   end)
 ```
 
-### --- Day 4: Camp Cleanup ---
+## --- Day 4: Camp Cleanup ---
 
 Space needs to be cleared before the last supplies can be unloaded from the ships, and so several Elves have been assigned the job of cleaning up sections of the camp. Every section has a unique ID number, and each Elf is assigned a range of section IDs.
 
@@ -495,7 +493,7 @@ puzzle_input =
   |> Enum.count(fn x -> x end)
 ```
 
-#### --- Day 5: Supply Stacks ---
+## --- Day 5: Supply Stacks ---
 
 The expedition can depart as soon as the final supplies have been unloaded from the ships. Supplies are stored in stacks of marked crates, but because the needed supplies are buried under many other crates, the crates need to be rearranged.
 
@@ -512,16 +510,11 @@ They do, however, have a drawing of the starting stacks of crates and the rearra
  1   2   3 
 ```
 
-```
 move 1 from 2 to 1
 move 3 from 1 to 3
 move 2 from 2 to 1
 move 1 from 1 to 2
-```
-
-In this example, there are three stacks of crates. 
-Stack 1 contains two crates: crate Z is on the bottom, and crate N is on top. Stack 2 contains three crates; from bottom to top, they are crates M, C, and D. 
-Finally, stack 3 contains a single crate, P.
+In this example, there are three stacks of crates. Stack 1 contains two crates: crate Z is on the bottom, and crate N is on top. Stack 2 contains three crates; from bottom to top, they are crates M, C, and D. Finally, stack 3 contains a single crate, P.
 
 Then, the rearrangement procedure is given. In each step of the procedure, a quantity of crates is moved from one stack to a different stack. In the first step of the above rearrangement procedure, one crate is moved from stack 2 to stack 1, resulting in this configuration:
 
@@ -535,33 +528,176 @@ Then, the rearrangement procedure is given. In each step of the procedure, a qua
 In the second step, three crates are moved from stack 1 to stack 3. Crates are moved one at a time, so the first crate to be moved (D) ends up below the second and third crates:
 
 ```
-    [Z]
-    [N]
-[C] [D]
-[M] [P]
+        [Z]
+        [N]
+    [C] [D]
+    [M] [P]
+ 1   2   3
 ```
 
-1   2   3
 Then, both crates are moved from stack 2 to stack 1. Again, because crates are moved one at a time, crate C ends up below crate M:
 
 ```
-    [Z]
-    [N]
-```
-
+        [Z]
+        [N]
 [M]     [D]
 [C]     [P]
  1   2   3
+```
+
 Finally, one crate is moved from stack 1 to stack 2:
 
 ```
-    [Z]
-    [N]
-    [D]
-```
-
+        [Z]
+        [N]
+        [D]
 [C] [M] [P]
  1   2   3
+```
+
 The Elves just need to know which crate will end up on top of each stack; in this example, the top crates are C in stack 1, M in stack 2, and Z in stack 3, so you should combine these together and give the Elves the message CMZ.
 
 After the rearrangement procedure completes, what crate ends up on top of each stack?
+
+```elixir
+input_control = Kino.Input.textarea("Paste Raw Input")
+```
+
+```elixir
+puzzle_input =
+  [
+    ["SLW"],
+    ["JTNQ"],
+    ["SCHFJ"],
+    ["TRMWNGB"],
+    ["TRLSDHQB"],
+    ["MJBVFHRL"],
+    ["DWRNJM"],
+    ["BZTFHNDJ"],
+    ["HLQNBFT"]
+  ]
+  |> Enum.map(fn x -> String.graphemes(Enum.at(x, 0)) end)
+
+IO.inspect(puzzle_input)
+```
+
+```elixir
+instructions_input =
+  Kino.Input.read(input_control)
+  |> String.split("\n")
+  |> Enum.map(fn instruction ->
+    String.replace_prefix(instruction, "move ", "")
+    |> String.split([" from ", " to "])
+    |> Enum.map_every(3, fn single_number ->
+      Integer.to_string(String.to_integer(single_number) + 1)
+    end)
+    |> Enum.map(fn single_number ->
+      String.to_integer(single_number) - 1
+    end)
+  end)
+
+# start of the array is the bottom; top is the end
+# I've change the numbers to match indicies :-D
+# [[1, 1, 0], [3, 0, 2], [2, 1, 0], [1, 0, 1]]
+
+practice_crate_setup_input = [["Z", "N"], ["M", "C", "D"], ["P"]]
+
+defmodule Crate do
+  def move_one_crate(from_array, to_array) do
+    {moved_crate, changed_from_array} = List.pop_at(from_array, -1)
+    {changed_from_array, List.insert_at(to_array, -1, moved_crate)}
+  end
+
+  def execute_one_crate_move(crate_stack, instruction) do
+    old_from_array = Enum.at(crate_stack, Enum.at(instruction, 1))
+    old_to_array = Enum.at(crate_stack, Enum.at(instruction, 2))
+    {new_from_array, new_to_array} = Crate.move_one_crate(old_from_array, old_to_array)
+
+    new_incomplete_crate_stack =
+      List.replace_at(crate_stack, Enum.at(instruction, 1), new_from_array)
+
+    new_complete_crate_stack =
+      List.replace_at(new_incomplete_crate_stack, Enum.at(instruction, 2), new_to_array)
+  end
+
+  def move_multi_crate(from_array, to_array, crates_to_move) do
+    {changed_from_array, moved_crates} = Enum.split(from_array, -crates_to_move)
+    {changed_from_array, Enum.concat(to_array, moved_crates)}
+  end
+
+  def execute_multi_crate_move(crate_stack, [how_many, _from, _to] = instruction) do
+    old_from_array = Enum.at(crate_stack, Enum.at(instruction, 1))
+    old_to_array = Enum.at(crate_stack, Enum.at(instruction, 2))
+
+    {new_from_array, new_to_array} =
+      Crate.move_multi_crate(old_from_array, old_to_array, how_many)
+
+    new_incomplete_crate_stack =
+      List.replace_at(crate_stack, Enum.at(instruction, 1), new_from_array)
+
+    List.replace_at(new_incomplete_crate_stack, Enum.at(instruction, 2), new_to_array)
+  end
+
+  def execuate_one_instruction(crate_stack, [how_many, from, to]) when how_many <= 1 do
+    execute_one_crate_move(crate_stack, [how_many, from, to])
+  end
+
+  def execuate_one_instruction(crate_stack, [how_many, from, to] = instruction) do
+    execute_one_crate_move(crate_stack, instruction)
+    |> execuate_one_instruction([how_many - 1, from, to])
+  end
+
+  def execute_all_instructions(
+        crate_stack,
+        instructions_input,
+        current_instruction,
+        total_instructions
+      )
+      when current_instruction == total_instructions - 1 do
+    execuate_one_instruction(crate_stack, Enum.at(instructions_input, current_instruction))
+  end
+
+  def execute_all_instructions(
+        crate_stack,
+        instructions_input,
+        current_instruction,
+        total_instructions
+      ) do
+    execuate_one_instruction(crate_stack, Enum.at(instructions_input, current_instruction))
+    |> execute_all_instructions(instructions_input, current_instruction + 1, total_instructions)
+  end
+
+  def execute_multi_crate_all_instructions(
+        crate_stack,
+        instructions_input,
+        current_instruction,
+        total_instructions
+      )
+      when current_instruction == total_instructions - 1 do
+    execute_multi_crate_move(crate_stack, Enum.at(instructions_input, current_instruction))
+  end
+
+  def execute_multi_crate_all_instructions(
+        crate_stack,
+        instructions_input,
+        current_instruction,
+        total_instructions
+      ) do
+    execute_multi_crate_move(crate_stack, Enum.at(instructions_input, current_instruction))
+    |> execute_multi_crate_all_instructions(
+      instructions_input,
+      current_instruction + 1,
+      total_instructions
+    )
+  end
+end
+
+total_instructions = Enum.count(instructions_input)
+# Crate.execute_all_instructions(puzzle_input, instructions_input, 0, total_instructions)
+Crate.execute_multi_crate_all_instructions(
+  puzzle_input,
+  instructions_input,
+  0,
+  total_instructions
+)
+```
