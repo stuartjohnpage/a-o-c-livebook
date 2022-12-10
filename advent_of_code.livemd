@@ -752,17 +752,19 @@ data_stream =
 
 defmodule RoutineDetector do
   def examine_letters(letter_list) do
-    Enum.reduce_while(letter_list, {0, []}, fn letter, {count, acc} ->
-      new_list = List.insert_at(acc, -1, letter)
+    Enum.reduce_while(letter_list, {0, []}, fn letter, {count, letters_to_examine} ->
+      new_list = List.insert_at(letters_to_examine, -1, letter)
 
-      if Enum.count(acc) > 3 do
-        if Enum.count(MapSet.new(acc)) == 4 do
-          IO.inspect(count)
-          {:halt, {count, acc}}
+      if Enum.count(letters_to_examine) > 3 do
+        # see if we can make it a set of length 4: if so, bingo! Halt
+        if Enum.count(MapSet.new(letters_to_examine)) == 4 do
+          {:halt, {count, letters_to_examine}}
+          # else, continue
         else
           {:cont, {count + 1, elem(List.pop_at(new_list, 0), 1)}}
         end
       else
+        # no op, just return bc data stream can't exist yet
         {:cont, {count + 1, new_list}}
       end
     end)
