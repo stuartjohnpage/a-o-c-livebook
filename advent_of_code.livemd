@@ -742,6 +742,8 @@ input_control = Kino.Input.textarea("Paste Raw Input")
 ```
 
 ```elixir
+number_to_find = 14
+
 data_stream =
   Kino.Input.read(input_control)
   |> String.split("")
@@ -755,9 +757,9 @@ defmodule RoutineDetector do
     Enum.reduce_while(letter_list, {0, []}, fn letter, {count, letters_to_examine} ->
       new_list = List.insert_at(letters_to_examine, -1, letter)
 
-      if Enum.count(letters_to_examine) > 13 do
+      if Enum.count(letters_to_examine) > number_to_find - 1 do
         # see if we can make it a set of length 4: if so, bingo! Halt
-        if Enum.count(MapSet.new(letters_to_examine)) == 14 do
+        if Enum.count(MapSet.new(letters_to_examine)) == number_to_find do
           {:halt, {count, letters_to_examine}}
           # else, continue
         else
