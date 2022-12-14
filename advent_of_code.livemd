@@ -892,6 +892,16 @@ Evaluate dirs:
 
 ```elixir
 defmodule FindSpace do
+  def merge_nested(map1, map2) do
+    Map.merge(map1, map2, &merge_nested/3)
+  end
+
+  def merge_nested(_k, %{} = v1, %{} = v2) do
+    Map.merge(v1, v2, &merge_nested/3)
+  end
+
+  def merge_nested(_k, _v1, v2), do: v2
+
   # dir comes in and either has dirs or files
   # maybe chunk after ls?
   # if file: eval and count. If dir: evaluate (recusive)
@@ -928,9 +938,11 @@ data_input =
 # FindSpace.get_dir_contents(data_input)
 
 data_input
-|> Enum.reduce({Map.new(), [:top_level]}, fn instruction, {current_map, current_dir_path} ->
+|> Enum.reduce({Map.new(top_level: Map.new()), [:top_level]}, fn instruction,
+                                                                 {current_map, current_dir_path} ->
   current_dir = Enum.at(current_dir_path, -1)
   dir_name_regex = ~r/\$ cd (?<dir_name>\w+)/
+  file_regex = ~r/(?<file_size>\d+) (?<file_name>\w?.+)/
 
   cond do
     # first dir, do nothing
@@ -946,13 +958,7 @@ data_input
       atom_dir_name = String.to_atom(dir_name)
       new_dir = %{atom_dir_name => %{}}
       new_map = put_in(current_map, current_dir_path, new_dir)
-
-      best_map =
-        Map.merge(current_map, new_map, fn _k, v1, v2 ->
-          Map.merge(v1, v2)
-        end)
-
-      IO.inspect(best_map)
+      best_map = FindSpace.merge_nested(current_map, new_map)
       new_path = List.insert_at(current_dir_path, -1, atom_dir_name)
       {best_map, new_path}
 
@@ -961,6 +967,21 @@ data_input
       IO.puts("Going back one level!")
       new_path = Enum.slice(current_dir_path, 0..-2)
       {current_map, new_path}
+
+    String.match?(instruction, file_regex) ->
+      %{"file_size" => file_size, "file_name" => file_name} =
+        Regex.named_captures(file_regex, instruction)
+
+      IO.puts("Adding file! #{file_name}")
+      atom_file_name = String.to_atom(file_name)
+      new_file = %{atom_file_name => String.to_integer(file_size)}
+      new_map = put_in(current_map, current_dir_path, new_file)
+
+      best_map = FindSpace.merge_nested(current_map, new_map)
+      IO.inspect(current_map, label: "old_map")
+      IO.inspect(new_map, label: "new_map")
+      IO.inspect(best_map, label: "merged map")
+      {best_map, current_dir_path}
 
     # default
     true ->
@@ -984,7 +1005,13 @@ data_input =
 ```
 
 ```elixir
-my_map = %{a: %{b: "hello"}}
+my_map = %{
+  foo: %{
+    bar: %{
+      baz: "my value"
+    }
+  }
+}
 
-put_in(my_map, [:a, :b], :c)
+put_in(my_map, [:foo, :bar, :baz, :new], "new value")
 ```
