@@ -902,6 +902,22 @@ defmodule FindSpace do
 
   def merge_nested(_k, _v1, v2), do: v2
 
+  def add_file_size_to_dirs(current_dir_path, dir_totals, file_size) do
+    Enum.reverse(current_dir_path)
+    |> Enum.reduce(dir_totals, fn dir_path, dir_total ->
+      current_value = Map.get(dir_total, dir_path, 0)
+      new_total_value = current_value + String.to_integer(file_size)
+      Map.put(dir_total, dir_path, new_total_value)
+    end)
+  end
+
+  def add_file_size_to_dirs(current_dir_path, dir_totals, file_size) do
+    dir = Enum.at(current_dir_path, -1)
+    current_value = Map.get(dir_totals, dir, 0)
+    new_total_value = current_value + String.to_integer(file_size)
+    new_total = Map.put(dir_totals, dir, new_total_value)
+  end
+
   # dir comes in and either has dirs or files
   # maybe chunk after ls?
   # if file: eval and count. If dir: evaluate (recusive)
@@ -937,81 +953,115 @@ data_input =
 
 # FindSpace.get_dir_contents(data_input)
 
-data_input
-|> Enum.reduce({Map.new(top_level: Map.new()), [:top_level]}, fn instruction,
-                                                                 {current_map, current_dir_path} ->
-  current_dir = Enum.at(current_dir_path, -1)
-  dir_name_regex = ~r/\$ cd (?<dir_name>\w+)/
-  file_regex = ~r/(?<file_size>\d+) (?<file_name>\w?.+)/
+{file_system, _path, dir_totals} =
+  data_input
+  |> Enum.reduce(
+    {Map.new(top_level: Map.new()), [:top_level], Map.new(top_level: 0)},
+    fn instruction, {current_map, current_dir_path, dir_totals} ->
+      current_dir = Enum.at(current_dir_path, -1)
+      dir_name_regex = ~r/\$ cd (?<dir_name>\w+)/
+      file_regex = ~r/(?<file_size>\d+) (?<file_name>\w?.+)/
 
-  cond do
-    # first dir, do nothing
-    String.match?(instruction, ~r/\$ cd \//) ->
-      IO.puts("First Dir! Doing nothing")
+      cond do
+        # first dir, do nothing
+        String.match?(instruction, ~r/\$ cd \//) ->
+          {current_map, current_dir_path, dir_totals}
 
-      {current_map, current_dir_path}
+        # new dir within current dir path: make new dir and append to path
+        String.match?(instruction, dir_name_regex) ->
+          %{"dir_name" => dir_name} = Regex.named_captures(dir_name_regex, instruction)
+          atom_dir_name = String.to_atom(dir_name)
+          new_dir = %{atom_dir_name => %{}}
+          new_map = put_in(current_map, current_dir_path, new_dir)
+          best_map = FindSpace.merge_nested(current_map, new_map)
+          new_path = List.insert_at(current_dir_path, -1, atom_dir_name)
 
-    # new dir within current dir path: make new dir and append to path
-    String.match?(instruction, dir_name_regex) ->
-      %{"dir_name" => dir_name} = Regex.named_captures(dir_name_regex, instruction)
-      IO.puts("new dir name detected! #{dir_name}")
-      atom_dir_name = String.to_atom(dir_name)
-      new_dir = %{atom_dir_name => %{}}
-      new_map = put_in(current_map, current_dir_path, new_dir)
-      best_map = FindSpace.merge_nested(current_map, new_map)
-      new_path = List.insert_at(current_dir_path, -1, atom_dir_name)
-      {best_map, new_path}
+          {best_map, new_path, dir_totals}
 
-    # # go back up one dir
-    String.match?(instruction, ~r/\$ cd ../) ->
-      IO.puts("Going back one level!")
-      new_path = Enum.slice(current_dir_path, 0..-2)
-      {current_map, new_path}
+        # # go back up one dir
+        String.match?(instruction, ~r/\$ cd ../) ->
+          new_path = Enum.slice(current_dir_path, 0..-2)
+          {current_map, new_path, dir_totals}
 
-    String.match?(instruction, file_regex) ->
-      %{"file_size" => file_size, "file_name" => file_name} =
-        Regex.named_captures(file_regex, instruction)
+        # found a file, add it
+        String.match?(instruction, file_regex) ->
+          %{"file_size" => file_size, "file_name" => file_name} =
+            Regex.named_captures(file_regex, instruction)
 
-      IO.puts("Adding file! #{file_name}")
-      atom_file_name = String.to_atom(file_name)
-      new_file = %{atom_file_name => String.to_integer(file_size)}
-      new_map = put_in(current_map, current_dir_path, new_file)
+          atom_file_name = String.to_atom(file_name)
+          new_file = %{atom_file_name => String.to_integer(file_size)}
+          new_map = put_in(current_map, current_dir_path, new_file)
+          IO.inspect(current_dir_path)
+          # here
+          new_local_total =
+            FindSpace.add_file_size_to_dirs(current_dir_path, dir_totals, file_size)
 
-      best_map = FindSpace.merge_nested(current_map, new_map)
-      IO.inspect(current_map, label: "old_map")
-      IO.inspect(new_map, label: "new_map")
-      IO.inspect(best_map, label: "merged map")
-      {best_map, current_dir_path}
+          best_map = FindSpace.merge_nested(current_map, new_map)
+          {best_map, current_dir_path, new_local_total}
 
-    # default
-    true ->
-      {current_map, current_dir_path}
-  end
-end)
+        # default
+        true ->
+          {current_map, current_dir_path, dir_totals}
+      end
+    end
+  )
+
+dir_totals
+|> Map.filter(fn {_key, value} -> value < 100_000 end)
+|> Map.values()
+|> Enum.sum()
+```
+
+```
+%{
+   top_level: %{
+     a: %{e: %{i: 584}, f: 29116, g: 2557, "h.lst": 62596},
+     "b.txt": 14848514,
+     "c.dat": 8504156,
+     d: %{"d.ext": 5626152, "d.log": 8033020, j: 4060174, k: 7214296}
+   }
+ }
 ```
 
 ```elixir
-data_input =
-  Kino.Input.read(input_control)
-  |> String.split("\n")
-  |> List.delete_at(0)
-  |> Enum.chunk_by(fn command -> String.match?(command, ~r/\$ cd (?<dir_name>\w+)/) end)
-  |> Enum.map_every(2, fn command_list -> List.delete_at(command_list, 0) end)
-  |> Enum.map(fn command_list ->
-    Enum.map(command_list, fn command_item ->
-      IO.inspect(command_item)
-    end)
-  end)
+all_dir_sizes =
+  input_control
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Stream.reject(&(&1 == "$ ls" || match?("dir " <> _, &1)))
+  |> Stream.concat(Stream.repeatedly(fn -> "$ cd .." end))
+  |> Stream.transform(
+    # initial accumulator
+    [0],
+
+    # reducer
+    fn
+      "$ cd ..", [_last] ->
+        {:halt, nil}
+
+      "$ cd ..", [leaving_size, parent_size | stack] ->
+        {[leaving_size], [parent_size + leaving_size | stack]}
+
+      "$ cd " <> _, stack ->
+        {[], [0 | stack]}
+
+      file, [size | stack] ->
+        [filesize, _] = String.split(file, " ")
+        {[], [size + String.to_integer(filesize) | stack]}
+    end
+  )
+  |> Enum.to_list()
+  |> Enum.reverse()
+
+all_dir_sizes
+|> Enum.filter(&(&1 <= 100_000))
+|> Enum.sum()
 ```
 
 ```elixir
-my_map = %{
-  foo: %{
-    bar: %{
-      baz: "my value"
-    }
-  }
-}
+disk_size_to_free_up = 30_000_000 + hd(all_dir_sizes) - 70_000_000
 
-put_in(my_map, [:foo, :bar, :baz, :new], "new value")
+all_dir_sizes
+|> Enum.filter(&(&1 >= disk_size_to_free_up))
+|> Enum.min()
 ```
